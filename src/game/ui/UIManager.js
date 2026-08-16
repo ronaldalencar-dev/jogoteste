@@ -58,6 +58,7 @@ export class UIManager {
   setDistrict(d) { this.hud.setDistrict(d); }
   setPrompt(label) { this.hud.setPrompt(label); }
   setResources(counts, changedId) { this.hud.setResources(counts, changedId); }
+  setDriving(on, fuel, speed) { this.hud.setDriving(on, fuel, speed); }
 
   toast(msg, type = 'info', duration = 3000) {
     const el = document.createElement('div');

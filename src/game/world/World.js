@@ -8,9 +8,9 @@ import { Vehicle } from '../entities/Vehicle.js';
 import { Tree, Bush, DeadTree } from '../entities/Tree.js';
 import { makeProp } from '../entities/Prop.js';
 import { PLOTS, VEHICLES, SPAWN, CELL } from '../data/city.js';
-import { EXAMINE_NOTES, RADIO_MESSAGES } from '../data/items.js';
+import { EXAMINE_NOTES, RADIO_MESSAGES, RESPAWN_TYPES } from '../data/items.js';
 import { mulberry32, hash2 } from '../core/Util.js';
-import { SOFT_TEX, TUFT_TEX, geoBox, matLambert } from './Textures.js';
+import { SOFT_TEX, TUFT_TEX, geoBox, matLambert, CAR_KINDS } from './Textures.js';
 
 export class World {
   constructor(scene, game) {
@@ -19,6 +19,9 @@ export class World {
     this.entities = [];
     this.animated = [];
     this.spawn = SPAWN;
+    this.propGroups = new Map();
+    this.respawnSpots = [];
+    this._respawnSeq = 0;
 
     this.map = new CityMap();
     this.size = this.map.size;
@@ -36,6 +39,8 @@ export class World {
     this._scatter();
     this._streetLamps();
     this._clouds();
+    this._collectSpots();
+    this._jerrycans();
   }
 
   /* ------------------------------------------------ luz */
@@ -102,15 +107,19 @@ export class World {
     for (const def of VEHICLES) {
       const v = new Vehicle(this.scene, def, this.game);
       this.entities.push(v);
+      const ang = def.ang ?? 0;
+      const K = CAR_KINDS[def.kind] || CAR_KINDS.sedan;
+
+      /* porta-malas fica na traseira (ponto de interação próprio) */
       if (def.loot) {
-        this.game.interaction.register({
-          id: 'car-' + def.id, x: def.x, z: def.z, r: 2.2,
+        v.trunkZone = this.game.interaction.register({
+          id: 'car-' + def.id, x: def.x, z: def.z, r: 1.8,
           label: 'ABRIR PORTA-MALAS', kind: 'loot', table: def.loot, host: v,
         });
       } else if (def.burnt) {
         this.game.interaction.register({
           id: 'car-' + def.id, x: def.x, z: def.z, r: 2.0,
-          label: 'EXAMINAR CARCAÇA', kind: 'examine',
+          label: 'EXAMINAR CARCAÇA', kind: 'examine', host: v,
           text: [
             'O calor derreteu o volante. Não sobrou nada útil.',
             'Marcas de bala na lataria. Alguém não chegou a tempo de sair.',
@@ -118,15 +127,115 @@ export class World {
           ],
         });
       }
+
+      /* zona de direção (carros intactos) */
+      if (v.drivable) {
+        v.driveZone = this.game.interaction.register({
+          id: 'drive-' + def.id, x: def.x, z: def.z, r: 2.2, kind: 'vehicle', host: v,
+          getLabel: (g) => (v.fuel < 99.5 && g.inventory.has('gasolina'))
+            ? `ABASTECER CARRO — 1 GALÃO (${Math.round(v.fuel)}%)`
+            : `ENTRAR NO CARRO (${Math.round(v.fuel)}%)`,
+          onUse: (g) => g.drivingSystem.tryUse(v),
+        });
+      }
+      v.updateZones();
     }
   }
 
   /* ------------------------------------------------ helpers de prop */
   _addProp(type, x, z, opts = {}) {
-    const p = makeProp(this.scene, type, x, z, { rng: mulberry32((x * 97 + z * 31) | 0), ...opts });
-    for (const [dx, dz, w, d] of p.colliders) this.collision.addBox(x + dx, z + dz, w, d, 'prop');
+    const p = makeProp(this.scene, type, x, z, { rng: mulberry32(((x * 97 + z * 31) | 0) + type.length), ...opts });
+    const tag = opts.tag || 'prop';
+    for (const [dx, dz, w, d] of p.colliders) this.collision.addBox(x + dx, z + dz, w, d, tag);
+    if (opts.tag) this.propGroups.set(opts.tag, p.group);
     if (p.update) this.animated.push(p);
     return p;
+  }
+
+  /* cria um container saqueável (com respawn se for do tipo que some) */
+  placeLootContainer(id, type, table, label, x, z) {
+    const p = this._addProp(type, x, z, { tag: id });
+    this.game.interaction.register({
+      id, x, z, r: 1.7, label, kind: 'loot', table,
+      host: this._hostFor(type, p),
+      respawn: RESPAWN_TYPES.has(type), propType: type,
+    });
+    return p;
+  }
+
+  /* um container foi saqueado: some daqui e renasce noutro canto da cidade */
+  containerLooted(zone) {
+    this.removePropById(zone.id);
+    this.particles.burst(zone.x, 0.8, zone.z, 0x9a968a, 10);
+
+    const spot = this._pickRespawnSpot();
+    if (!spot) return;
+    const newId = `${zone.propType}-r${++this._respawnSeq}`;
+    this.placeLootContainer(newId, zone.propType, zone.table, zone.label, spot.x, spot.z);
+    this.particles.burst(spot.x, 0.8, spot.z, 0xd8b430, 8);
+    this.game.ui.toast('Alguém deixou suprimentos em outro canto da cidade...', 'info', 3600);
+    this.game.onContainerRespawned(zone.id, {
+      id: newId, type: zone.propType, table: zone.table, label: zone.label, x: spot.x, z: spot.z,
+    });
+  }
+
+  removePropById(id) {
+    const g = this.propGroups.get(id);
+    if (g) g.removeFromParent();
+    this.propGroups.delete(id);
+    this.collision.removeByTag(id);
+  }
+
+  /* recria containers renascidos ao carregar um save */
+  restoreRespawns(list) {
+    for (const r of list || []) {
+      this.placeLootContainer(r.id, r.type, r.table, r.label, r.x, r.z);
+      const n = parseInt((r.id.match(/-r(\d+)$/) || [])[1] || '0', 10);
+      this._respawnSeq = Math.max(this._respawnSeq, n);
+    }
+  }
+
+  _pickRespawnSpot() {
+    if (!this.respawnSpots.length) return null;
+    const p = this.game.player;
+    for (let i = 0; i < 50; i++) {
+      const s = this.respawnSpots[(Math.random() * this.respawnSpots.length) | 0];
+      if (Math.hypot(s.x - p.x, s.z - p.z) < 14) continue;
+      return s;
+    }
+    return this.respawnSpots[(Math.random() * this.respawnSpots.length) | 0];
+  }
+
+  /* pontos válidos para containers renascerem */
+  _collectSpots() {
+    const rng = mulberry32(777);
+    const okGround = [GROUND.GRASS, GROUND.DIRT, GROUND.RUBBLE, GROUND.CONCRETE];
+    let tries = 0;
+    while (this.respawnSpots.length < 130 && tries < 3000) {
+      tries++;
+      const x = 4 + rng() * (this.size - 8);
+      const z = 4 + rng() * (this.size - 8);
+      if (!okGround.includes(this.map.cellAt(x, z))) continue;
+      let free = true;
+      for (const r of this._plotRects)
+        if (x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1) { free = false; break; }
+      if (free) this.respawnSpots.push({ x, z });
+    }
+  }
+
+  /* galões de gasolina físicos espalhados pelo mapa */
+  _jerrycans() {
+    const spots = [
+      [58.5, 114.5], [166.5, 52.5], [100.5, 10.5], [133.5, 86.5],
+      [147.5, 140.5], [120.5, 170.5], [30.5, 100.5], [94.5, 178.5],
+    ];
+    spots.forEach(([x, z], i) => {
+      this._addProp('jerrycan', x, z, { tag: 'gas-' + i });
+      this.game.interaction.register({
+        id: 'gas-' + i, x, z, r: 1.5, label: 'PEGAR GALÃO DE GASOLINA',
+        kind: 'pickup', item: 'gasolina', qty: 1,
+      });
+    });
   }
 
   _hostFor(type, p) {
@@ -144,8 +253,12 @@ export class World {
   }
 
   _loot(id, type, table, label, x, z, opts = {}) {
-    const p = this._addProp(type, x, z, opts);
-    this.game.interaction.register({ id, x, z, r: 1.7, label, kind: 'loot', table, host: this._hostFor(type, p) });
+    const p = this._addProp(type, x, z, { ...opts, tag: id });
+    this.game.interaction.register({
+      id, x, z, r: 1.7, label, kind: 'loot', table,
+      host: this._hostFor(type, p),
+      respawn: RESPAWN_TYPES.has(type), propType: type,
+    });
     return p;
   }
 

@@ -6,19 +6,26 @@ export class Collision {
   }
 
   addRect(x0, z0, x1, z1, tag = 'solid') {
-    this.aabbs.push({ x0, z0, x1, z1, tag });
+    const b = { x0, z0, x1, z1, tag };
+    this.aabbs.push(b);
+    return b;
   }
 
   addBox(cx, cz, w, d, tag = 'solid') {
-    this.addRect(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, tag);
+    return this.addRect(cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, tag);
   }
 
   /* caixa rotacionada → AABB envolvente */
-  addRotatedBox(cx, cz, w, d, angle) {
+  addRotatedBox(cx, cz, w, d, angle, tag = 'vehicle') {
     const c = Math.abs(Math.cos(angle)), s = Math.abs(Math.sin(angle));
     const hw = (w * c + d * s) / 2 + 0.12;
     const hd = (w * s + d * c) / 2 + 0.12;
-    this.addRect(cx - hw, cz - hd, cx + hw, cz + hd, 'vehicle');
+    return this.addRect(cx - hw, cz - hd, cx + hw, cz + hd, tag);
+  }
+
+  removeByTag(tag) {
+    for (let i = this.aabbs.length - 1; i >= 0; i--)
+      if (this.aabbs[i].tag === tag) this.aabbs.splice(i, 1);
   }
 
   overlaps(x, z, r) {

@@ -15,8 +15,11 @@ export class CameraRig {
     this.target = new THREE.Vector2(96, 96);
     this._pos = new THREE.Vector2(96, 96);
     this.aspect = aspect;
+    this.shake = 0;
     this.updateProjection();
   }
+
+  addShake(m) { this.shake = Math.min(1.4, this.shake + m); }
 
   updateProjection() {
     const w = this.viewH * this.aspect;
@@ -45,7 +48,14 @@ export class CameraRig {
     const px = clamp(this._pos.x, Math.min(halfW, worldSize / 2), Math.max(worldSize - halfW, worldSize / 2));
     const pz = clamp(this._pos.y, Math.min(halfH, worldSize / 2), Math.max(worldSize - halfH, worldSize / 2));
 
-    this.cam.position.set(px, 120, pz);
+    let ox = 0, oz = 0;
+    if (this.shake > 0.01) {
+      ox = (Math.random() - 0.5) * this.shake * 0.9;
+      oz = (Math.random() - 0.5) * this.shake * 0.9;
+      this.shake *= Math.exp(-6 * dt);
+    } else this.shake = 0;
+
+    this.cam.position.set(px + ox, 120, pz + oz);
     this.cam.updateMatrixWorld();
   }
 

@@ -51,10 +51,26 @@ export class HUD {
         <div class="res-line mat">${ICONS.material}MATERIAIS<b>0</b></div>
       </div>
 
+      <div class="hud-driving px-panel" style="display:none">
+        <div class="drv-title">
+          <svg viewBox="0 0 14 14" shape-rendering="crispEdges" width="15" height="15">
+            <rect x="2" y="2" width="10" height="11" fill="#c23b2e"/><rect x="2" y="2" width="10" height="2" fill="#8d2418"/>
+            <rect x="5" y="0" width="3" height="2" fill="#8d2418"/><rect x="8" y="0" width="2" height="2" fill="#d8b430"/>
+            <rect x="3" y="6" width="8" height="3" fill="#e8d870"/>
+          </svg>
+          COMBUSTÍVEL
+        </div>
+        <div class="fuel-row">
+          <div class="fuel-bar"><div class="fuel-fill"></div></div>
+          <span class="fuel-num">100%</span>
+        </div>
+        <div class="speed-num">0 km/h · <b>E</b> sair · encha com galões</div>
+      </div>
+
       <div class="hud-prompt px-panel" style="display:none"><kbd>E</kbd><span class="txt">INTERAGIR</span></div>
 
       <div class="hud-hint">
-        <b>WASD</b> mover · <b>E</b> interagir · <b>I</b> inventário · <b>ESC</b> pausa · <b>scroll</b> zoom
+        <b>WASD</b> mover/dirigir · <b>E</b> interagir · <b>I</b> inventário · <b>ESC</b> pausa
       </div>
     `;
     container.appendChild(el);
@@ -71,6 +87,21 @@ export class HUD {
       medicamento: el.querySelector('.res-line.med'),
       material: el.querySelector('.res-line.mat'),
     };
+
+    this.drivingEl = el.querySelector('.hud-driving');
+    this.fuelFill = el.querySelector('.fuel-fill');
+    this.fuelNum = el.querySelector('.fuel-num');
+    this.speedNum = el.querySelector('.speed-num');
+  }
+
+  setDriving(on, fuel = 100, speed = 0) {
+    this.drivingEl.style.display = on ? 'block' : 'none';
+    if (!on) return;
+    const f = Math.max(0, Math.round(fuel));
+    this.fuelFill.style.width = f + '%';
+    this.fuelFill.className = 'fuel-fill' + (f <= 12 ? ' empty' : f <= 30 ? ' low' : '');
+    this.fuelNum.textContent = f + '%';
+    this.speedNum.innerHTML = `${Math.round(speed)} km/h · <b>E</b> sair · encha com galões`;
   }
 
   setHP(hp) {

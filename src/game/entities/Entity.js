@@ -19,7 +19,11 @@ export class Entity {
   }
 
   get x() { return this.group.position.x; }
+  set x(v) { this.group.position.x = v; }
+  get y() { return this.group.position.y; }
+  set y(v) { this.group.position.y = v; }
   get z() { return this.group.position.z; }
+  set z(v) { this.group.position.z = v; }
 
   onUpdate(fn) { this.updaters.push(fn); }
 

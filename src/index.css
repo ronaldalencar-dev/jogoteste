@@ -361,3 +361,152 @@ input[type='range']::-moz-range-thumb {
 .quit-panel { width: min(460px, 92vw); padding: 30px 34px; text-align: left; }
 .quit-panel h3 { font-family: 'Press Start 2P', monospace; font-size: 15px; color: var(--text); margin: 0 0 12px; text-shadow: 3px 3px 0 #000; }
 .quit-panel p { font-size: 23px; color: var(--text-dim); line-height: 1.35; }
+
+/* ============================================================
+   INVENTÁRIO ESTILO MINECRAFT
+   ============================================================ */
+.inv-screen { justify-content: center; align-items: center; background: rgba(5, 7, 3, 0.62); }
+.inv-panel { width: min(560px, 95vw); padding: 22px 26px 20px; }
+
+.inv-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+.inv-title { font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--text); text-shadow: 3px 3px 0 #000; margin: 0 0 5px; }
+.inv-sub { font-size: 20px; color: var(--text-dim); }
+.inv-close { font-size: 19px; color: var(--text-dim); padding-top: 4px; }
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+  background: #0e110b;
+  border: 3px solid #000;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.05), inset -2px -2px 0 rgba(0, 0, 0, 0.6);
+  padding: 10px;
+}
+
+.inv-slot {
+  position: relative;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, #23281c 0%, #1a1e14 60%, #14170f 100%);
+  border: 2px solid #000;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.07),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  transition: transform 0.06s steps(2);
+}
+.inv-slot:disabled { opacity: 0.45; }
+.inv-slot.typed { cursor: pointer; }
+.inv-slot.typed:hover {
+  border-color: var(--hazard);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.14),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(216, 180, 48, 0.25);
+  transform: translateY(-2px);
+}
+.inv-slot.typed:active { transform: translateY(1px); }
+
+.inv-slot.empty .slot-icon { opacity: 0.28; filter: grayscale(0.8); }
+.inv-slot .slot-icon {
+  width: 74%; height: 74%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.inv-slot .slot-qty {
+  position: absolute; right: 3px; bottom: 1px;
+  font-family: 'Press Start 2P', monospace; font-size: 8px;
+  color: #fff; text-shadow: 2px 2px 0 #000;
+  pointer-events: none;
+}
+.inv-slot .slot-key {
+  position: absolute; left: 3px; top: 1px;
+  font-family: 'Press Start 2P', monospace; font-size: 6px;
+  color: rgba(205, 211, 184, 0.45);
+  pointer-events: none;
+}
+.inv-slot .slot-badge {
+  display: none;
+  position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+  font-family: 'Press Start 2P', monospace; font-size: 6px;
+  background: var(--hazard); color: #141204;
+  padding: 2px 4px; border: 1px solid #000;
+  white-space: nowrap; z-index: 3;
+}
+.inv-slot.equipped {
+  border-color: #6fd870;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.1),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.5),
+    0 0 0 2px rgba(111, 216, 112, 0.4);
+}
+.inv-slot.equipped .slot-badge { display: block; }
+.inv-slot.deny { animation: slotDeny 0.28s steps(4); }
+@keyframes slotDeny {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); border-color: var(--blood); }
+  75% { transform: translateX(3px); border-color: var(--blood); }
+}
+
+.inv-tip {
+  position: absolute; z-index: 20;
+  width: 250px;
+  background: #100d18;
+  border: 2px solid #2a1f4a;
+  outline: 2px solid #000;
+  padding: 10px 12px;
+  pointer-events: none;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+}
+.inv-tip .tip-name {
+  font-family: 'Press Start 2P', monospace; font-size: 9px;
+  text-shadow: 2px 2px 0 #000; margin-bottom: 6px;
+}
+.inv-tip .tip-x { color: var(--text-dim); }
+.inv-tip .tip-desc { font-size: 19px; line-height: 1.15; color: var(--text-dim); }
+.inv-tip .tip-act { display: block; margin-top: 6px; font-size: 18px; color: #8fd06a; }
+.inv-tip .tip-act.none { color: #7a6a5a; }
+
+.inv-foot {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  margin-top: 14px; font-size: 19px; color: var(--text-dim);
+}
+.inv-foot b { color: var(--text); font-weight: normal; }
+
+/* ============================================================
+   PAINEL DE DIREÇÃO (combustível + velocidade)
+   ============================================================ */
+.hud-driving {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  padding: 10px 18px 12px;
+  min-width: 330px;
+  animation: promptIn 0.15s steps(2);
+}
+.hud-driving .drv-title {
+  font-family: 'Press Start 2P', monospace; font-size: 8px;
+  color: var(--hazard); letter-spacing: 1px; margin-bottom: 7px;
+  display: flex; align-items: center; gap: 7px;
+}
+.hud-driving .fuel-row { display: flex; align-items: center; gap: 10px; }
+.hud-driving .fuel-bar {
+  flex: 1; height: 13px; background: #0a0c07;
+  border: 2px solid #000; overflow: hidden;
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.08);
+}
+.hud-driving .fuel-fill {
+  height: 100%; width: 100%;
+  background: linear-gradient(to bottom, #e0c04a 0%, #c8a030 55%, #9a7a20 100%);
+  transition: width 0.2s steps(5);
+  box-shadow: inset -3px 0 0 rgba(0, 0, 0, 0.25);
+}
+.hud-driving .fuel-fill.low { background: linear-gradient(to bottom, #e08a3a 0%, #c06420 55%, #8d4a18 100%); }
+.hud-driving .fuel-fill.empty {
+  background: linear-gradient(to bottom, #e05a44 0%, #b03325 55%, #87271c 100%);
+  animation: blinker 0.7s steps(2) infinite;
+}
+.hud-driving .fuel-num { font-size: 21px; min-width: 52px; text-align: right; color: var(--text); }
+.hud-driving .speed-num { margin-top: 6px; font-size: 19px; color: var(--text-dim); }
+.hud-driving .speed-num b { color: var(--hazard); font-weight: normal; }
+
+/* prompt sobe quando o painel de direção está ativo */
+.hud:has(.hud-driving[style*="block"]) .hud-prompt { bottom: 118px; }

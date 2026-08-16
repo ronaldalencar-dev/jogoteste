@@ -97,6 +97,47 @@ export class Player extends Entity {
     const fringe = new THREE.Mesh(geoBox(0.38, 0.08, 0.1), hairM);
     fringe.position.set(0, 1.2, 0.16);
     this.rig.add(fringe);
+
+    /* armas equipáveis (presas à mão direita) */
+    this.weapons = {};
+    const gunDark = new THREE.MeshLambertMaterial({ color: 0x26282c });
+    const gunWood = new THREE.MeshLambertMaterial({ color: 0x6e4a2c });
+
+    const pistol = new THREE.Group();
+    const pSlide = new THREE.Mesh(geoBox(0.1, 0.1, 0.34), gunDark);
+    pSlide.position.set(0, 0.05, 0.1);
+    const pGrip = new THREE.Mesh(geoBox(0.09, 0.2, 0.12), gunDark);
+    pGrip.position.set(0, -0.1, -0.02);
+    pistol.add(pSlide, pGrip);
+
+    const shotgun = new THREE.Group();
+    const sBarrel = new THREE.Mesh(geoBox(0.09, 0.09, 0.85), gunDark);
+    sBarrel.position.set(0, 0.04, 0.18);
+    const sWood = new THREE.Mesh(geoBox(0.1, 0.12, 0.4), gunWood);
+    sWood.position.set(0, -0.01, -0.22);
+    shotgun.add(sBarrel, sWood);
+
+    const rifle = new THREE.Group();
+    const rBarrel = new THREE.Mesh(geoBox(0.08, 0.08, 1.0), gunDark);
+    rBarrel.position.set(0, 0.04, 0.24);
+    const rBody = new THREE.Mesh(geoBox(0.1, 0.14, 0.42), gunWood);
+    rBody.position.set(0, -0.02, -0.18);
+    const rMag = new THREE.Mesh(geoBox(0.08, 0.18, 0.1), gunDark);
+    rMag.position.set(0, -0.14, 0.02);
+    rifle.add(rBarrel, rBody, rMag);
+
+    for (const [id, wpn] of Object.entries({ pistola: pistol, escopeta: shotgun, rifle })) {
+      wpn.visible = false;
+      wpn.position.set(0, -0.18, 0.1);
+      this.armR.add(wpn);
+      this.weapons[id] = wpn;
+    }
+    this.equipped = null;
+  }
+
+  setWeapon(id) {
+    for (const [wid, wpn] of Object.entries(this.weapons)) wpn.visible = wid === id;
+    this.equipped = id || null;
   }
 
   setMove(vx, vz, moving) {

@@ -1,4 +1,5 @@
 /* Tree / Bush / DeadTree — vegetação em blocos pixelados */
+import * as THREE from 'three';
 import { Entity } from './Entity.js';
 import { canopyTex, geoBox, matTex, matLambert } from '../world/Textures.js';
 

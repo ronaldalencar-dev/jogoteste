@@ -12,8 +12,11 @@ import { InteractionSystem } from '../systems/InteractionSystem.js';
 import { InventorySystem } from '../systems/InventorySystem.js';
 import { LootSystem } from '../systems/LootSystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
+import { DrivingSystem } from '../systems/DrivingSystem.js';
 import { UIManager } from '../ui/UIManager.js';
 import { AudioManager } from '../audio/AudioManager.js';
+import { showFatal } from './Errors.js';
+import { SLOT_ORDER } from '../data/items.js';
 
 const START_KIT = { comida: 3, medicamento: 1, material: 6 };
 
@@ -22,6 +25,7 @@ export class Game {
     this.container = container;
     this.state = 'boot';
     this.lootedIds = new Set();
+    this.respawnedList = [];
     this._district = null;
     this._hpUiTimer = 0;
     this._hazardTick = 0;
@@ -53,15 +57,18 @@ export class Game {
 
     this._buildWorld();
     this.controller = new PlayerController(this);
+    this.drivingSystem = new DrivingSystem(this);
     this._resetPlayer();
 
     this.ui.setResources(this.inventory.counts);
     this.ui.setHP(this.player.hp);
 
-    /* desbloqueia o áudio no primeiro gesto */
-    const unlock = () => { this.audio.unlock(); };
-    window.addEventListener('pointerdown', unlock, { once: false });
-    window.addEventListener('keydown', unlock, { once: false });
+    /* desbloqueia o áudio no primeiro gesto (à prova de falha) */
+    const unlock = () => {
+      try { this.audio.unlock(); } catch { /* sem áudio, o jogo segue */ }
+    };
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && this.state === 'playing') this.setState('paused');
@@ -87,6 +94,7 @@ export class Game {
     this.world = new World(this.worldGroup, this);
     this.particles = this.world.particles;
     this.lootedIds.clear();
+    this.respawnedList = [];
   }
 
   _resetPlayer() {
@@ -106,6 +114,8 @@ export class Game {
       this.audio.startAmbient();
       this._checkDistrict(true);
     }
+    /* pausou no volante? o motor fica em silêncio */
+    if (s !== 'playing' && this.drivingSystem && this.drivingSystem.active) this.audio.stopEngine();
     if (s === 'menu') this.cameraRig.zoomReset?.();
   }
 
@@ -123,7 +133,8 @@ export class Game {
 
   newGame() {
     /* só reconstrói a cidade se algo já foi saqueado/modificado */
-    if (this.lootedIds.size > 0) this._buildWorld();
+    if (this.lootedIds.size > 0 || this.respawnedList.length > 0) this._buildWorld();
+    this.respawnedList = [];
     this.inventory.restore({ ...START_KIT });
     this._resetPlayer();
     this.setState('playing');
@@ -143,22 +154,33 @@ export class Game {
     this._resetPlayer();
     this.player.setPosition(data.player.x, data.player.z);
     this.player.hp = data.player.hp ?? 100;
-    for (const id of data.looted || []) this.interaction.markLooted(id);
+    for (const id of data.looted || []) {
+      this.interaction.markLooted(id);
+      /* galões coletados não podem reaparecer no chão */
+      if (id.startsWith('gas-')) this.world.removePropById(id);
+    }
+    this.respawnedList = [...(data.respawns || [])];
+    this.world.restoreRespawns(data.respawns);
     this.setState('playing');
     this.ui.setHP(this.player.hp);
     this.ui.toast('Progresso restaurado. Boa sorte lá fora.', 'info');
   }
 
   toMenu() {
+    if (this.drivingSystem && this.drivingSystem.active) this.drivingSystem.exit();
     this.setState('menu');
   }
 
   saveGame(silent = false) {
-    const d = this.world.districtAt(this.player.x, this.player.z);
+    const v = this.drivingSystem.active ? this.drivingSystem.vehicle : null;
+    const px = v ? v.x : this.player.x;
+    const pz = v ? v.z : this.player.z;
+    const d = this.world.districtAt(px, pz);
     const ok = this.save.save({
-      player: { x: this.player.x, z: this.player.z, hp: this.player.hp },
+      player: { x: px, z: pz, hp: this.player.hp },
       inv: this.inventory.snapshot(),
       looted: [...this.lootedIds],
+      respawns: this.respawnedList,
       district: d.nome,
     });
     if (!silent) {
@@ -173,6 +195,12 @@ export class Game {
   }
 
   addLootedId(id) { this.lootedIds.add(id); }
+
+  /* um container saqueado renasceu noutro lugar — persiste no save */
+  onContainerRespawned(oldId, info) {
+    this.respawnedList = this.respawnedList.filter((r) => r.id !== oldId);
+    this.respawnedList.push(info);
+  }
 
   restAtBase() {
     this.player.hp = 100;
@@ -197,8 +225,8 @@ export class Game {
   }
 
   /* ------------------------------------------------ distrito / perigo */
-  _checkDistrict(force = false) {
-    const d = this.world.districtAt(this.player.x, this.player.z);
+  _checkDistrict(force = false, x = this.player.x, z = this.player.z) {
+    const d = this.world.districtAt(x, z);
     if (force || !this._district || this._district.id !== d.id) {
       this._district = d;
       this.ui.setDistrict(d);
@@ -213,6 +241,7 @@ export class Game {
   _collapse() {
     if (this._collapsing) return;
     this._collapsing = true;
+    if (this.drivingSystem.active) this.drivingSystem.exit();
     this.audio.hurt();
     this.ui.fadeTo(true);
     this.ui.toast('VOCÊ DESMAIOU — arrastado de volta à base.', 'danger', 4600);
@@ -230,13 +259,22 @@ export class Game {
 
   /* ------------------------------------------------ loop */
   _frame(timestamp) {
+    try {
+      this._tick(timestamp);
+    } catch (err) {
+      showFatal(err);
+      this.renderer.three.setAnimationLoop(null);
+      return;
+    }
+  }
+
+  _tick(timestamp) {
     const dt = this.time.update(timestamp);
     const t = this.time.now;
     const inp = this.input;
 
-    /* zoom da câmera */
-    const wheel = inp.consumeWheel();
-    if (this.state === 'playing' && wheel !== 0) this.cameraRig.zoomBy(wheel);
+    /* zoom travado por design — o scroll não altera a câmera */
+    inp.consumeWheel();
 
     switch (this.state) {
       case 'menu':
@@ -247,18 +285,39 @@ export class Game {
 
       case 'playing': {
         if (inp.wasPressed('Escape')) { this.setState('paused'); break; }
-        if (inp.wasPressed('KeyI')) { this.audio.uiClick(); this.setState('inventory'); break; }
+        const driving = this.drivingSystem.active;
 
-        this.controller.update(dt);
-        this.player.update(dt, t);
-        this.world.update(dt, t);
-        this.interaction.update(dt);
-        this.cameraRig.follow(dt, this.player.x, this.player.z, this.player.vx, this.player.vz, this.world.size);
+        if (inp.wasPressed('KeyI')) {
+          if (driving) {
+            this.audio.denied();
+            this.ui.toast('Saia do carro [E] para abrir a mochila.', 'info');
+          } else {
+            this.audio.uiClick();
+            this.setState('inventory');
+            break;
+          }
+        }
+
+        if (driving) {
+          this.drivingSystem.update(dt);
+          this.world.update(dt, t);
+        } else {
+          this.controller.update(dt);
+          this.player.update(dt, t);
+          this.world.update(dt, t);
+          this.interaction.update(dt);
+        }
+
+        /* referência de posição: carro ou jogador */
+        const v = this.drivingSystem.vehicle;
+        const rx = v ? v.x : this.player.x;
+        const rz = v ? v.z : this.player.z;
+        this.cameraRig.follow(dt, rx, rz, (v ? v.vx : this.player.vx) * 0.55, (v ? v.vz : this.player.vz) * 0.55, this.world.size);
 
         this._districtTimer += dt;
         if (this._districtTimer > 0.25) {
           this._districtTimer = 0;
-          this._checkDistrict();
+          this._checkDistrict(false, rx, rz);
         }
 
         const d = this._district;
@@ -283,6 +342,10 @@ export class Game {
         if (inp.wasPressed('Escape') || inp.wasPressed('KeyI')) {
           this.audio.uiBack();
           this.setState('playing');
+          break;
+        }
+        for (let i = 0; i < 8; i++) {
+          if (inp.wasPressed('Digit' + (i + 1))) this.useItem(SLOT_ORDER[i]);
         }
         break;
       }

@@ -18,6 +18,37 @@
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- watchdog: se o jogo não iniciar em 5s, mostra o diagnóstico na tela -->
+    <div id="boot-fail" style="display:none; position:fixed; inset:0; z-index:9998; background:#0b0d09;
+      font-family:'VT323','Courier New',monospace; color:#cdd3b8; align-items:center; justify-content:center; padding:20px;">
+      <div style="max-width:620px; background:#161a12; border:3px solid #3d4430; padding:24px 28px; box-shadow:6px 6px 0 rgba(0,0,0,0.6);">
+        <div style="font-family:'Press Start 2P',monospace; font-size:13px; color:#d8b430; text-shadow:2px 2px 0 #000; margin-bottom:12px;">
+          CIDADE EM GUERRA
+        </div>
+        <div style="font-size:26px; color:#e05a44; margin-bottom:10px;">O jogo não foi carregado.</div>
+        <div style="font-size:21px; line-height:1.45;">
+          Provavelmente esta página foi aberta do jeito errado. Para rodar:<br/><br/>
+          <b style="color:#d8b430;">Desenvolvimento:</b> no terminal, dentro da pasta do projeto:<br/>
+          <code style="color:#8fd06a;">npm install</code> → <code style="color:#8fd06a;">npm run dev</code><br/>
+          e abra o endereço exibido (ex.: http://localhost:5173).<br/><br/>
+          <b style="color:#d8b430;">Produção:</b> <code style="color:#8fd06a;">npm run build</code> e sirva a pasta
+          <b>dist/</b> — ex.: <code style="color:#8fd06a;">cd dist &amp;&amp; python -m http.server 8000</code>
+          e acesse http://localhost:8000.<br/><br/>
+          <span style="color:#8b927a;">Não funciona abrir o index.html direto pelo explorador de arquivos (file://),
+          nem servir a raiz do projeto com um servidor estático.</span>
+        </div>
+      </div>
+    </div>
+    <script>
+      setTimeout(function () {
+        if (!window.__CEG_BOOTED__) {
+          var el = document.getElementById('boot-fail');
+          if (el) el.style.display = 'flex';
+        }
+      }, 5000);
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

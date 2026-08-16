@@ -87,6 +87,55 @@ export class AudioManager {
   uiBack() { this._tone('square', 300, 0.09, 0.1, 180); }
 
   open() { this._noise(0.16, 0.12, 300, 'lowpass'); this._tone('triangle', 190, 0.14, 0.1, 130); }
+  enterCar() { this._noise(0.1, 0.1, 500, 'bandpass'); this._tone('square', 220, 0.08, 0.08, 300); }
+  exitCar() { this._noise(0.12, 0.1, 380, 'bandpass'); this._tone('square', 300, 0.08, 0.07, 210); }
+  crash() { this._noise(0.22, 0.18, 240, 'lowpass'); this._tone('sine', 90, 0.18, 0.12, 45); }
+  refuel() {
+    this._noise(0.7, 0.07, 900, 'bandpass', 0, 0.8);
+    this._tone('sine', 300, 0.5, 0.06, 520, 0.1);
+  }
+  equip() { this._noise(0.06, 0.1, 2400, 'highpass'); this._tone('square', 900, 0.05, 0.07, 600); }
+  engineDeny() { this._tone('sawtooth', 70, 0.3, 0.08, 50); }
+
+  /* --- motor do carro (contínuo, pitch acompanha a velocidade) --- */
+  startEngine() {
+    if (!this.ctx || this._engine) return;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 46;
+    const sub = this.ctx.createOscillator();
+    sub.type = 'square';
+    sub.frequency.value = 23;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = 320;
+    const g = this.ctx.createGain();
+    g.gain.value = 0.0001;
+    g.gain.linearRampToValueAtTime(0.05, this.ctx.currentTime + 0.25);
+    osc.connect(f); sub.connect(f); f.connect(g); g.connect(this.master);
+    osc.start(); sub.start();
+    this._engine = { osc, sub, g, f };
+  }
+
+  setEngine(speed01, throttle) {
+    if (!this._engine) return;
+    const t = this.ctx.currentTime;
+    const hz = 44 + speed01 * 92;
+    this._engine.osc.frequency.setTargetAtTime(hz, t, 0.08);
+    this._engine.sub.frequency.setTargetAtTime(hz / 2, t, 0.08);
+    this._engine.f.frequency.setTargetAtTime(260 + speed01 * 700, t, 0.1);
+    this._engine.g.gain.setTargetAtTime(0.04 + speed01 * 0.045 + (throttle ? 0.012 : 0), t, 0.1);
+  }
+
+  stopEngine() {
+    if (!this._engine) return;
+    const e = this._engine;
+    this._engine = null;
+    const t = this.ctx.currentTime;
+    e.g.gain.setTargetAtTime(0.0001, t, 0.12);
+    e.osc.frequency.setTargetAtTime(30, t, 0.2);
+    setTimeout(() => { try { e.osc.stop(); e.sub.stop(); } catch { /* já parado */ } }, 900);
+  }
   pickup() {
     this._tone('triangle', 523, 0.08, 0.14);
     this._tone('triangle', 784, 0.1, 0.14, null, 0.07);

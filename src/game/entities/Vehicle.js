@@ -1,7 +1,8 @@
-/* Vehicle — carros, vans e caminhões (estáticos; alguns saqueáveis) */
+/* Vehicle — carros, vans e caminhões (dirigíveis; alguns saqueáveis) */
 import * as THREE from 'three';
 import { Entity } from './Entity.js';
 import { CAR_KINDS, carTopTex, geoBox, matLambert } from '../world/Textures.js';
+import { mulberry32 } from '../core/Util.js';
 
 function shade(hex, amt) {
   const r = Math.max(0, Math.min(255, (hex >> 16) + amt));
@@ -77,10 +78,53 @@ export class Vehicle extends Entity {
       this.group.position.y = 1.05;
     }
 
-    if (game) game.collision.addRotatedBox(def.x, def.z, L, W, def.ang ?? 0);
+    /* estado de direção */
+    this.L = L;
+    this.W = W;
+    this.x = def.x;
+    this.z = def.z;
+    this.heading = def.ang ?? 0;
+    this.speed = 0;
+    this.vx = 0;
+    this.vz = 0;
+    this.drivable = !def.burnt && !def.flipped;
+    const rng = mulberry32((def.id.charCodeAt(1) || 7) * 101 + 13);
+    this.fuel = this.drivable ? 25 + rng() * 70 : 0;
+    this.maxSpeed = 13.5 + rng() * 3;
+    this.tag = 'veh-' + def.id;
+
+    if (game) game.collision.addRotatedBox(def.x, def.z, L, W, def.ang ?? 0, this.tag);
   }
+
+  get fuel01() { return Math.max(0, this.fuel) / 100; }
 
   applyLooted() {
     if (this.trunkLid) this.trunkLid.rotation.z = 1.0;
+  }
+
+  /* chamado quando o jogador entra: some com o colisor fantasma */
+  detachCollider(collision) { collision.removeByTag(this.tag); }
+
+  /* chamado ao sair: recria o colisor na posição atual */
+  attachCollider(collision) {
+    collision.addRotatedBox(this.x, this.z, this.L, this.W, this.heading, this.tag);
+  }
+
+  updateZones() {
+    if (this.driveZone) {
+      this.driveZone.x = this.x;
+      this.driveZone.z = this.z;
+    }
+    if (this.trunkZone) {
+      this.trunkZone.x = this.x + Math.cos(this.heading) * this.L * 0.38;
+      this.trunkZone.z = this.z - Math.sin(this.heading) * this.L * 0.38;
+    }
+  }
+
+  setPosition(x, z, heading) {
+    this.x = x; this.z = z; this.heading = heading;
+    this.group.position.set(x, this.group.position.y, z);
+    this.group.rotation.y = heading;
+    this.updateZones();
   }
 }

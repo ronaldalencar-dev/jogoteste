@@ -274,6 +274,29 @@ export function makeProp(scene, type, x, z, opts = {}) {
       g.add(M(geoBox(0.14, 0.14, 0.05), matBasic(0x60c060), -0.15, 1.1, 0.22, false));
       out.colliders.push([0, 0, 1.0, 0.7]);
       break;
+    case 'jerrycan': {
+      /* galão vermelho deitado, visível de cima */
+      const can = matLambert(0xc23b2e);
+      const canDark = matLambert(0x8d2418);
+      g.add(M(geoBox(0.52, 0.3, 0.78), can, 0, 0.26, 0));
+      g.add(M(geoBox(0.54, 0.08, 0.8), canDark, 0, 0.13, 0));
+      const cap = M(geoCyl(0.09, 0.09, 0.14, 8), matLambert(0xd8b430), 0.14, 0.44, -0.24);
+      g.add(cap);
+      const handle = M(geoBox(0.1, 0.1, 0.3), canDark, -0.12, 0.42, 0.18);
+      g.add(handle);
+      /* brilho de destaque para chamar atenção */
+      const glow = new THREE.Mesh(geoPlane(1.5, 1.5), new THREE.MeshBasicMaterial({
+        color: 0xe05040, transparent: true, opacity: 0.16, depthWrite: false,
+      }));
+      glow.rotation.x = -Math.PI / 2;
+      glow.position.y = 0.05;
+      g.add(glow);
+      out.update = (dt, t) => {
+        g.position.y = Math.sin(t * 2.4) * 0.03;
+        glow.material.opacity = 0.1 + Math.sin(t * 3.1) * 0.06;
+      };
+      break;
+    }
   }
 
   scene.add(g);
