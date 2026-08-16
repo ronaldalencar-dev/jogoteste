@@ -17,11 +17,19 @@ export class Input {
     this._onUp = (e) => this.down.delete(e.code);
     this._onBlur = () => { this.down.clear(); };
     this._onWheel = (e) => { this.wheel += e.deltaY; };
+    this._onMouseDown = (e) => {
+      if (e.button === 0) this.pressed.add('Mouse0');
+    };
+    this._onMouseUp = (e) => {
+      if (e.button === 0) this.down.delete('Mouse0');
+    };
 
     window.addEventListener('keydown', this._onDown);
     window.addEventListener('keyup', this._onUp);
     window.addEventListener('blur', this._onBlur);
     window.addEventListener('wheel', this._onWheel, { passive: true });
+    window.addEventListener('mousedown', this._onMouseDown);
+    window.addEventListener('mouseup', this._onMouseUp);
   }
 
   isDown(...codes) {

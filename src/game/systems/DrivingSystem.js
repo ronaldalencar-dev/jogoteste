@@ -16,22 +16,39 @@ export class DrivingSystem {
   tryUse(vehicle) {
     const g = this.game;
     if (!vehicle.drivable) return;
+    
+    /* se tiver gasolina e tanque não cheio, pergunta se quer abastecer */
     if (vehicle.fuel < 99.5 && g.inventory.has('gasolina')) {
-      this.refuel(vehicle);
-    } else {
-      this.enter(vehicle);
+      const fuelNeeded = Math.ceil((100 - vehicle.fuel) / 50);
+      const fuelHave = g.inventory.counts.gasolina;
+      const fuelToUse = Math.min(fuelNeeded, fuelHave);
+      
+      if (fuelToUse > 0) {
+        /* mostra modal de confirmação */
+        g.ui.showFuelConfirm(vehicle, fuelToUse);
+        return;
+      }
     }
+    
+    /* sem gasolina ou não quis abastecer → entra no carro */
+    this.enter(vehicle);
   }
 
-  refuel(vehicle) {
+  refuel(vehicle, fuelAmount = 1) {
     const g = this.game;
-    g.inventory.counts.gasolina--;
+    g.inventory.counts.gasolina -= fuelAmount;
     g.inventory._emit('gasolina');
-    vehicle.fuel = Math.min(100, vehicle.fuel + 50);
+    vehicle.fuel = Math.min(100, vehicle.fuel + fuelAmount * 50);
     g.audio.refuel();
     g.particles.burst(vehicle.x, 1.0, vehicle.z, 0xe05040, 12);
-    g.ui.toast(`Tanque abastecido: ${Math.round(vehicle.fuel)}% (+50)`, 'heal');
+    g.ui.toast(`Tanque abastecido: ${Math.round(vehicle.fuel)}% (+${fuelAmount * 50})`, 'heal');
     this._fuelWarned = false;
+  }
+
+  confirmRefuel(vehicle, fuelAmount) {
+    this.refuel(vehicle, fuelAmount);
+    /* após abastecer, entra no carro automaticamente */
+    setTimeout(() => this.enter(vehicle), 400);
   }
 
   enter(vehicle) {
