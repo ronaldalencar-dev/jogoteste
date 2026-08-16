@@ -13,6 +13,7 @@ import { InventorySystem } from '../systems/InventorySystem.js';
 import { LootSystem } from '../systems/LootSystem.js';
 import { SaveSystem } from '../systems/SaveSystem.js';
 import { DrivingSystem } from '../systems/DrivingSystem.js';
+import { ShootingSystem } from '../systems/ShootingSystem.js';
 import { UIManager } from '../ui/UIManager.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { showFatal } from './Errors.js';
@@ -58,6 +59,7 @@ export class Game {
     this._buildWorld();
     this.controller = new PlayerController(this);
     this.drivingSystem = new DrivingSystem(this);
+    this.shootingSystem = new ShootingSystem(this);
     this._resetPlayer();
 
     this.ui.setResources(this.inventory.counts);
@@ -298,6 +300,11 @@ export class Game {
           }
         }
 
+        /* tiro com clique esquerdo ou F */
+        if (!driving && (inp.wasPressed('Mouse0') || inp.wasPressed('KeyF'))) {
+          this.shootingSystem.fire();
+        }
+
         if (driving) {
           this.drivingSystem.update(dt);
           this.world.update(dt, t);
@@ -306,6 +313,7 @@ export class Game {
           this.player.update(dt, t);
           this.world.update(dt, t);
           this.interaction.update(dt);
+          this.shootingSystem.update(dt);
         }
 
         /* referência de posição: carro ou jogador */

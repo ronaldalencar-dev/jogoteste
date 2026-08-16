@@ -77,6 +77,59 @@ export class UIManager {
 
   fadeTo(on) { this.fade.classList.toggle('on', on); }
 
+  /* modal de confirmação de abastecimento */
+  showFuelConfirm(vehicle, fuelAmount) {
+    const g = this.game;
+    
+    /* cria modal sobreposto */
+    const modal = document.createElement('div');
+    modal.className = 'fuel-modal';
+    modal.innerHTML = `
+      <div class="fuel-panel px-panel">
+        <h3>ABASTECER VEÍCULO?</h3>
+        <p>Tanque atual: <b>${Math.round(vehicle.fuel)}%</b></p>
+        <p>Galões disponíveis: <b>${g.inventory.counts.gasolina}</b></p>
+        <p>Usar <b>${fuelAmount} galão(ões)</b> para encher até <b>${Math.min(100, vehicle.fuel + fuelAmount * 50)}%</b>?</p>
+        <div class="menu-buttons">
+          <button class="menu-btn fuel-confirm"><span class="arr">▸</span>SIM, ABASTECER</button>
+          <button class="menu-btn fuel-cancel"><span class="arr">▸</span>NÃO, ENTRAR NO CARRO</button>
+        </div>
+      </div>
+    `;
+    
+    this.container.appendChild(modal);
+    
+    /* bloqueia input do jogo */
+    const prevEnabled = g.input.enabled;
+    g.input.enabled = false;
+    
+    modal.querySelector('.fuel-confirm').addEventListener('click', () => {
+      g.audio.uiClick();
+      modal.remove();
+      g.input.enabled = prevEnabled;
+      g.drivingSystem.confirmRefuel(vehicle, fuelAmount);
+    });
+    
+    modal.querySelector('.fuel-cancel').addEventListener('click', () => {
+      g.audio.uiBack();
+      modal.remove();
+      g.input.enabled = prevEnabled;
+      g.drivingSystem.enter(vehicle);
+    });
+    
+    /* ESC cancela */
+    const escHandler = (e) => {
+      if (e.code === 'Escape') {
+        window.removeEventListener('keydown', escHandler);
+        g.audio.uiBack();
+        modal.remove();
+        g.input.enabled = prevEnabled;
+        g.drivingSystem.enter(vehicle);
+      }
+    };
+    window.addEventListener('keydown', escHandler);
+  }
+
   dispose() {
     this._toastTimers.forEach(clearTimeout);
   }
