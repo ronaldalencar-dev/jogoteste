@@ -170,7 +170,7 @@ export class DrivingSystem {
 
     /* consumo de combustível (reduzido para durar mais) */
     if (Math.abs(v.speed) > 0.4) {
-      const demand = 1.2 * (0.35 + 0.65 * Math.abs(v.speed) / v.maxSpeed);
+      const demand = 0.45 * (0.35 + 0.65 * Math.abs(v.speed) / v.maxSpeed);
       v.fuel = Math.max(0, v.fuel - demand * dt);
       if (v.fuel < 20 && v.fuel > 0 && !this._fuelWarned) {
         this._fuelWarned = true;

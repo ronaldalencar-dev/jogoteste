@@ -1,4 +1,4 @@
-/* Input — teclado com estado contínuo e detecção de borda */
+/* Input — teclado com estado contínuo e detecção de borda + mouse para mira */
 
 const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']);
 
@@ -8,6 +8,8 @@ export class Input {
     this.pressed = new Set();   // bordas deste frame
     this.wheel = 0;
     this.enabled = true;
+    this.mouseX = 0;
+    this.mouseY = 0;
 
     this._onDown = (e) => {
       if (PREVENT.has(e.code)) e.preventDefault();
@@ -23,6 +25,10 @@ export class Input {
     this._onMouseUp = (e) => {
       if (e.button === 0) this.down.delete('Mouse0');
     };
+    this._onMouseMove = (e) => {
+      this.mouseX = e.clientX;
+      this.mouseY = e.clientY;
+    };
 
     window.addEventListener('keydown', this._onDown);
     window.addEventListener('keyup', this._onUp);
@@ -30,6 +36,7 @@ export class Input {
     window.addEventListener('wheel', this._onWheel, { passive: true });
     window.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
+    window.addEventListener('mousemove', this._onMouseMove);
   }
 
   isDown(...codes) {
