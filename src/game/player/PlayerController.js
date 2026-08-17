@@ -17,8 +17,9 @@ export class PlayerController {
     /* terreno influencia a velocidade */
     const cell = g.world.map.cellAt(p.x, p.z);
     let sp = this.speed;
-    if (cell === GROUND.RUBBLE || cell === GROUND.DIRT) sp *= 0.74;
-    else if (cell === GROUND.GRASS) sp *= 0.92;
+    /* mira reduz um pouco a velocidade para marcha tática */
+    const isAiming = g.shootingSystem?.isAiming;
+    if (isAiming) sp *= 0.72;
 
     const dx = mv.x * sp * dt;
     const dz = mv.z * sp * dt;
@@ -27,7 +28,7 @@ export class PlayerController {
     p.group.position.x = clamp(next.x, 1.2, g.world.size - 1.2);
     p.group.position.z = clamp(next.z, 1.2, g.world.size - 1.2);
 
-    p.setMove(mv.x * sp, mv.z * sp, mv.moving);
+    p.setMove(mv.x * sp, mv.z * sp, mv.moving, isAiming);
 
     /* passos + poeira */
     const movedDist = Math.hypot(p.x - before.x, p.z - before.z);

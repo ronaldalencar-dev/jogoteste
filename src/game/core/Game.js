@@ -124,13 +124,29 @@ export class Game {
   menuAction(act) {
     if (act === 'new') this.newGame();
     else if (act === 'continue') this.continueGame();
-    else if (act === 'quit') this.setState('quit');
+    else if (act === 'quit') this.quitGame();
   }
 
   pauseAction(act) {
     if (act === 'resume') this.setState('playing');
     else if (act === 'save') { this.saveGame(); }
     else if (act === 'menu') this.toMenu();
+    else if (act === 'quit') this.quitGame();
+  }
+
+  quitGame() {
+    if (window.electronAPI && typeof window.electronAPI.closeWindow === 'function') {
+      window.electronAPI.closeWindow();
+      return;
+    }
+    if (window.electron && typeof window.electron.close === 'function') {
+      window.electron.close();
+      return;
+    }
+    try {
+      window.close();
+    } catch {}
+    this.setState('quit');
   }
 
   newGame() {
@@ -300,14 +316,16 @@ export class Game {
           }
         }
 
-        /* atualiza mira do sistema de tiro com posicao do mouse */
+        /* atualiza mira do sistema de tiro com posição do mouse */
         if (!driving) {
           this.shootingSystem.setMousePosition(inp.mouseX, inp.mouseY);
         }
 
-        // tiro com clique esquerdo ou F
-        if (!driving && (inp.wasPressed('Mouse0') || inp.wasPressed('KeyF'))) {
-          this.shootingSystem.fire();
+        // disparo: clique esquerdo do mouse (LMB) ou tecla F
+        const isClick = inp.wasPressed('Mouse0') || inp.wasPressed('KeyF');
+        const isHold = inp.isDown('Mouse0') && this.shootingSystem.isAiming;
+        if (!driving && (isClick || isHold)) {
+          this.shootingSystem.fire(isClick);
         }
 
         /* lanterna: L para ligar/desligar */

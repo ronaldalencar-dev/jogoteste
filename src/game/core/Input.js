@@ -20,10 +20,16 @@ export class Input {
     this._onBlur = () => { this.down.clear(); };
     this._onWheel = (e) => { this.wheel += e.deltaY; };
     this._onMouseDown = (e) => {
-      if (e.button === 0) this.pressed.add('Mouse0');
+      const code = e.button === 0 ? 'Mouse0' : e.button === 2 ? 'Mouse2' : 'Mouse' + e.button;
+      this.pressed.add(code);
+      this.down.add(code);
     };
     this._onMouseUp = (e) => {
-      if (e.button === 0) this.down.delete('Mouse0');
+      const code = e.button === 0 ? 'Mouse0' : e.button === 2 ? 'Mouse2' : 'Mouse' + e.button;
+      this.down.delete(code);
+    };
+    this._onContextMenu = (e) => {
+      e.preventDefault();
     };
     this._onMouseMove = (e) => {
       this.mouseX = e.clientX;
@@ -37,6 +43,7 @@ export class Input {
     window.addEventListener('mousedown', this._onMouseDown);
     window.addEventListener('mouseup', this._onMouseUp);
     window.addEventListener('mousemove', this._onMouseMove);
+    window.addEventListener('contextmenu', this._onContextMenu);
   }
 
   isDown(...codes) {
@@ -75,5 +82,9 @@ export class Input {
     window.removeEventListener('keyup', this._onUp);
     window.removeEventListener('blur', this._onBlur);
     window.removeEventListener('wheel', this._onWheel);
+    window.removeEventListener('mousedown', this._onMouseDown);
+    window.removeEventListener('mouseup', this._onMouseUp);
+    window.removeEventListener('mousemove', this._onMouseMove);
+    window.removeEventListener('contextmenu', this._onContextMenu);
   }
 }

@@ -14,7 +14,8 @@ export class PauseMenu {
           <button class="menu-btn" data-act="resume"><span class="arr">▸</span>CONTINUAR</button>
           <button class="menu-btn" data-act="save"><span class="arr">▸</span>SALVAR JOGO</button>
           <button class="menu-btn" data-act="settings"><span class="arr">▸</span>CONFIGURAÇÕES</button>
-          <button class="menu-btn danger" data-act="menu"><span class="arr">▸</span>MENU PRINCIPAL</button>
+          <button class="menu-btn" data-act="menu"><span class="arr">▸</span>MENU PRINCIPAL</button>
+          <button class="menu-btn danger" data-act="quit"><span class="arr">▸</span>SAIR DO JOGO</button>
         </div>
         <div class="settings-slot" style="display:none"></div>
       </div>

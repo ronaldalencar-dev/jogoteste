@@ -90,9 +90,11 @@ export class MainMenu {
         <div class="settings-slot" style="display:none"><div class="px-panel" style="padding:16px 20px"></div></div>
         <div class="controls-card px-panel">
           <h5>CONTROLES</h5>
-          <div><span class="k">W</span><span class="k">A</span><span class="k">S</span><span class="k">D</span> / setas — mover</div>
-          <div><span class="k">E</span> interagir · <span class="k">I</span> inventário</div>
-          <div><span class="k">ESC</span> pausa · <span class="k">scroll</span> zoom da câmera</div>
+          <div><span class="k">W</span><span class="k">A</span><span class="k">S</span><span class="k">D</span> — mover</div>
+          <div><span class="k">Botão Dir. (RMB)</span> — Segurar para mirar (linha branca)</div>
+          <div><span class="k">Botão Esq. (LMB)</span> — Disparar arma</div>
+          <div><span class="k">E</span> interagir · <span class="k">I</span> inventário · <span class="k">L</span> lanterna</div>
+          <div><span class="k">ESC</span> pausa · <span class="k">scroll</span> zoom</div>
         </div>
       </div>
     `;

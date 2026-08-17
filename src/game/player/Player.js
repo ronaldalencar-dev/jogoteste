@@ -169,9 +169,14 @@ export class Player extends Entity {
     return this.lanternOn;
   }
 
-  setMove(vx, vz, moving) {
+  setAim(isAiming, aimAngle = 0) {
+    this.isAiming = isAiming;
+    this.aimAngle = aimAngle;
+  }
+
+  setMove(vx, vz, moving, isAiming = false) {
     this.vx = vx; this.vz = vz; this.moving = moving;
-    if (moving) {
+    if (moving && !isAiming) {
       const target = Math.atan2(vx, vz);
       this.heading = lerpAngle(this.heading, target, 0.25);
     }
@@ -179,19 +184,40 @@ export class Player extends Entity {
 
   update(dt, t) {
     this.rig.rotation.y = this.heading;
-    if (this.moving) {
+
+    if (this.isAiming) {
+      /* postura de mira tática com arma levantada */
+      this.armR.rotation.x = -Math.PI / 2.0;
+      this.armR.rotation.z = -0.12;
+      this.armL.rotation.x = -Math.PI / 2.2;
+      this.armL.rotation.z = 0.26;
+      if (this.moving) {
+        this.walkCycle += dt * 8;
+        const s = Math.sin(this.walkCycle);
+        this.legL.rotation.x = s * 0.55;
+        this.legR.rotation.x = -s * 0.55;
+      } else {
+        this.legL.rotation.x *= 0.8;
+        this.legR.rotation.x *= 0.8;
+      }
+      this.rig.position.y = this.moving ? Math.abs(Math.sin(this.walkCycle)) * 0.03 : 0;
+    } else if (this.moving) {
       this.walkCycle += dt * 11;
       const s = Math.sin(this.walkCycle);
       this.legL.rotation.x = s * 0.75;
       this.legR.rotation.x = -s * 0.75;
       this.armL.rotation.x = -s * 0.55;
       this.armR.rotation.x = s * 0.55;
+      this.armR.rotation.z = 0;
+      this.armL.rotation.z = 0;
       this.rig.position.y = Math.abs(Math.sin(this.walkCycle)) * 0.05;
     } else {
       this.legL.rotation.x *= 0.8;
       this.legR.rotation.x *= 0.8;
       this.armL.rotation.x *= 0.8;
       this.armR.rotation.x *= 0.8;
+      this.armR.rotation.z = 0;
+      this.armL.rotation.z = 0;
       this.rig.position.y = 0;
       this.torso.scale.setScalar(1 + Math.sin(t * 2.2) * 0.015); /* respiração */
     }

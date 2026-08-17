@@ -61,11 +61,18 @@ export class UIManager {
   setDriving(on, fuel, speed) { this.hud.setDriving(on, fuel, speed); }
 
   toast(msg, type = 'info', duration = 3000) {
+    /* evita mensagens duplicadas na tela */
+    for (const child of this.toastsEl.children) {
+      if (child.textContent === msg && !child.classList.contains('out')) {
+        return;
+      }
+    }
+
     const el = document.createElement('div');
     el.className = `toast ${type}`;
     el.textContent = msg;
     this.toastsEl.appendChild(el);
-    while (this.toastsEl.children.length > 5) this.toastsEl.removeChild(this.toastsEl.firstChild);
+    while (this.toastsEl.children.length > 4) this.toastsEl.removeChild(this.toastsEl.firstChild);
     const t = setTimeout(() => {
       el.classList.add('out');
       setTimeout(() => el.remove(), 320);
