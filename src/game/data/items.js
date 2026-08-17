@@ -41,23 +41,33 @@ export const ITEMS = {
     desc: 'Fuzil de ferrolho com luneta trincada. Alcance é tudo.',
     acao: 'Clique para equipar', cura: 0, cor: '#6a7076', dano: 26,
   },
+  lanterna: {
+    id: 'lanterna', nome: 'LANTERNA', tipo: 'ferramenta',
+    desc: 'Lanterna de mão com bateria fraca. Ilumina áreas escuras à noite.',
+    acao: 'Clique para ligar/desligar', cura: 0, cor: '#d8b430',
+  },
+  pilha: {
+    id: 'pilha', nome: 'PILHAS', tipo: 'recurso',
+    desc: 'Pilhas alcalinas AA. Recarregam a bateria da lanterna.',
+    acao: 'Use na lanterna para recarregar', cura: 0, cor: '#a8aa82',
+  },
 };
 
 /* ordem dos slots no inventário */
-export const SLOT_ORDER = ['comida', 'medicamento', 'gasolina', 'municao', 'material', 'pistola', 'escopeta', 'rifle'];
+export const SLOT_ORDER = ['comida', 'medicamento', 'gasolina', 'municao', 'material', 'pistola', 'escopeta', 'rifle', 'lanterna', 'pilha'];
 
 /* tabelas de loot: [itemId, peso, qtdMin, qtdMax] */
 export const LOOT_TABLES = {
-  crate:      [['material', 42, 2, 4], ['comida', 26, 1, 2], ['gasolina', 12, 1, 1], ['municao', 12, 2, 5], ['pistola', 6, 1, 1], ['medicamento', 2, 1, 1]],
-  fridge:     [['comida', 62, 2, 4], ['medicamento', 14, 1, 2], ['material', 14, 1, 2], ['gasolina', 10, 1, 1]],
-  cabinet:    [['medicamento', 58, 1, 3], ['comida', 20, 1, 1], ['municao', 12, 1, 4], ['material', 10, 1, 1]],
-  carTrunk:   [['comida', 24, 1, 2], ['material', 24, 1, 3], ['gasolina', 18, 1, 1], ['municao', 14, 2, 6], ['pistola', 8, 1, 1], ['escopeta', 5, 1, 1], ['medicamento', 7, 1, 1]],
-  rubble:     [['material', 62, 2, 5], ['comida', 16, 1, 2], ['gasolina', 12, 1, 1], ['municao', 10, 1, 3]],
-  dumpster:   [['comida', 42, 1, 3], ['material', 30, 1, 2], ['gasolina', 12, 1, 1], ['medicamento', 16, 1, 1]],
-  locker:     [['material', 36, 1, 3], ['municao', 22, 2, 6], ['pistola', 10, 1, 1], ['escopeta', 7, 1, 1], ['rifle', 5, 1, 1], ['medicamento', 20, 1, 2]],
+  crate:      [['material', 42, 2, 4], ['comida', 26, 1, 2], ['gasolina', 12, 1, 1], ['municao', 12, 2, 5], ['pistola', 6, 1, 1], ['medicamento', 2, 1, 1], ['lanterna', 4, 1, 1], ['pilha', 8, 1, 2]],
+  fridge:     [['comida', 62, 2, 4], ['medicamento', 14, 1, 2], ['material', 14, 1, 2], ['gasolina', 10, 1, 1], ['pilha', 6, 1, 2]],
+  cabinet:    [['medicamento', 58, 1, 3], ['comida', 20, 1, 1], ['municao', 12, 1, 4], ['material', 10, 1, 1], ['pilha', 8, 1, 2]],
+  carTrunk:   [['comida', 24, 1, 2], ['material', 24, 1, 3], ['gasolina', 18, 1, 1], ['municao', 14, 2, 6], ['pistola', 8, 1, 1], ['escopeta', 5, 1, 1], ['medicamento', 7, 1, 1], ['lanterna', 3, 1, 1]],
+  rubble:     [['material', 62, 2, 5], ['comida', 16, 1, 2], ['gasolina', 12, 1, 1], ['municao', 10, 1, 3], ['pilha', 5, 1, 1]],
+  dumpster:   [['comida', 42, 1, 3], ['material', 30, 1, 2], ['gasolina', 12, 1, 1], ['medicamento', 16, 1, 1], ['pilha', 6, 1, 2]],
+  locker:     [['material', 36, 1, 3], ['municao', 22, 2, 6], ['pistola', 10, 1, 1], ['escopeta', 7, 1, 1], ['rifle', 5, 1, 1], ['medicamento', 20, 1, 2], ['lanterna', 4, 1, 1]],
   barrel:     [['material', 42, 1, 2], ['gasolina', 30, 1, 1], ['comida', 16, 1, 1], ['municao', 12, 1, 3]],
-  safe:       [['municao', 30, 4, 10], ['pistola', 20, 1, 1], ['rifle', 14, 1, 1], ['escopeta', 14, 1, 1], ['medicamento', 12, 2, 3], ['comida', 10, 2, 3]],
-  shelf:      [['comida', 52, 1, 3], ['material', 24, 1, 2], ['gasolina', 12, 1, 1], ['municao', 12, 1, 4]],
+  safe:       [['municao', 30, 4, 10], ['pistola', 20, 1, 1], ['rifle', 14, 1, 1], ['escopeta', 14, 1, 1], ['medicamento', 12, 2, 3], ['comida', 10, 2, 3], ['pilha', 10, 2, 4]],
+  shelf:      [['comida', 52, 1, 3], ['material', 24, 1, 2], ['gasolina', 12, 1, 1], ['municao', 12, 1, 4], ['pilha', 8, 1, 2]],
 };
 
 /* tipos de container que SOMEM e RENASCEM em outro lugar ao serem saqueados */

@@ -551,4 +551,47 @@ export class World {
   }
 
   districtAt(x, z) { return this.map.districtAt(x, z); }
+
+  /* verifica se há prédio numa posição (para raycast de tiro) */
+  getBuildingAt(x, z) {
+    for (const b of this.entities) {
+      if (b.plot) {
+        const cx = b.plot.x + b.plot.w / 2;
+        const cz = b.plot.z + b.plot.d / 2;
+        const hw = b.plot.w / 2;
+        const hd = b.plot.d / 2;
+        if (x >= cx - hw && x <= cx + hw && z >= cz - hd && z <= cz + hd) {
+          return b;
+        }
+      }
+    }
+    return null;
+  }
+
+  /* verifica se há prop numa posição (para raycast de tiro) */
+  getPropAt(x, z) {
+    for (const [tag, group] of this.propGroups) {
+      const pos = group.position;
+      /* aproximação simples: verifica distância */
+      if (Math.abs(pos.x - x) < 1.2 && Math.abs(pos.z - z) < 1.2) {
+        /* encontra o prop correspondente */
+        for (const p of this.animated) {
+          if (p.group === group) {
+            return { ...p, id: tag, x: pos.x, z: pos.z };
+          }
+        }
+        /* props estáticos */
+        return { id: tag, x: pos.x, z: pos.z, destructible: true, hp: 50 };
+      }
+    }
+    return null;
+  }
+
+  /* remove prop por ID */
+  removePropById(id) {
+    const g = this.propGroups.get(id);
+    if (g) g.removeFromParent();
+    this.propGroups.delete(id);
+    this.collision.removeByTag(id);
+  }
 }

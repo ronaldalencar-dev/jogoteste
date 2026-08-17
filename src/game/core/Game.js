@@ -305,6 +305,12 @@ export class Game {
           this.shootingSystem.fire();
         }
 
+        /* lanterna: L para ligar/desligar */
+        if (!driving && inp.wasPressed('KeyL')) {
+          const isOn = this.player.toggleLantern();
+          this.ui.toast(isOn ? 'Lanterna LIGADA' : 'Lanterna DESLIGADA', 'info', 1500);
+        }
+
         if (driving) {
           this.drivingSystem.update(dt);
           this.world.update(dt, t);
