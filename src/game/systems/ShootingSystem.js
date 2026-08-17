@@ -1,5 +1,5 @@
-/* ShootingSystem — sistema de tiro realista com armas */
-import { dist2 } from '../core/Util.js';
+/* ShootingSystem — sistema de tiro realista com mira estilo Foxhole */
+import { dist2, lerpAngle } from '../core/Util.js';
 import { ITEMS } from '../data/items.js';
 
 export class ShootingSystem {
@@ -8,8 +8,65 @@ export class ShootingSystem {
     this.canShoot = true;
     this.lastShotTime = 0;
     this.raycastInterval = null;
+    /* mira estilo Foxhole: angulo independente do corpo */
+    this.aimAngle = 0;
+    this.aiming = false;
+    this.mouseX = 0;
+    this.mouseY = 0;
+    /* animacao de recuo da arma */
+    this.weaponRecoil = 0;
+    this.recoilRecovery = 0;
+    /* ejecao de cartuchos */
+    this.shellEjectionTimer = 0;
   }
-
+  
+  /* atualiza a mira baseada na posicao do mouse */
+  updateAim(dt) {
+    const g = this.game;
+    if (g.state !== 'playing' || g.drivingSystem.active) return;
+    
+    /* calcula angulo da mira baseado no mouse relativo ao centro da tela */
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const dx = this.mouseX - centerX;
+    const dy = this.mouseY - centerY;
+    
+    /* angulo alvo baseado na posicao do mouse */
+    const targetAngle = Math.atan2(dx, -dy);
+    
+    /* suaviza transicao da mira */
+    this.aimAngle = lerpAngle(this.aimAngle, targetAngle, 0.15);
+    this.aiming = true;
+    
+    /* recupera recuo da arma */
+    if (this.weaponRecoil > 0) {
+      this.weaponRecoil -= this.recoilRecovery * dt;
+      if (this.weaponRecoil < 0) this.weaponRecoil = 0;
+    }
+    
+    /* atualiza visual da arma do jogador */
+    this._updateWeaponVisual();
+  }
+  
+  _updateWeaponVisual() {
+    const g = this.game;
+    const player = g.player;
+    
+    /* rotaciona o torso na direcao da mira */
+    const aimDiff = this.aimAngle - player.heading;
+    player.torso.rotation.y = aimDiff * 0.7;
+    
+    /* aplica recuo visual na arma */
+    const equipped = player.weapons[player.equipped];
+    if (equipped && this.weaponRecoil > 0.01) {
+      equipped.position.z = 0.1 + this.weaponRecoil * 0.3;
+      equipped.rotation.x = -this.weaponRecoil * 0.5;
+    } else if (equipped) {
+      equipped.position.z = 0.1;
+      equipped.rotation.x = 0;
+    }
+  }
+  
   /* verifica se pode atirar baseado na arma equipada */
   canFire(weaponId) {
     if (!weaponId) return false;
@@ -17,7 +74,7 @@ export class ShootingSystem {
     const weapon = ITEMS[weaponId];
     if (!weapon || weapon.tipo !== 'arma') return false;
 
-    /* verifica munição */
+    /* verifica municao */
     if (!this.game.inventory.has('municao')) {
       return false;
     }
@@ -41,13 +98,13 @@ export class ShootingSystem {
   _getWeaponStats(weaponId) {
     switch (weaponId) {
       case 'pistola':
-        return { damage: 12, range: 25, spread: 0.08, count: 1 };
+        return { damage: 12, range: 25, spread: 0.08, count: 1, recoil: 0.15 };
       case 'escopeta':
-        return { damage: 34, range: 12, spread: 0.35, count: 6 };
+        return { damage: 34, range: 12, spread: 0.35, count: 6, recoil: 0.45 };
       case 'rifle':
-        return { damage: 26, range: 50, spread: 0.02, count: 1 };
+        return { damage: 26, range: 50, spread: 0.02, count: 1, recoil: 0.25 };
       default:
-        return { damage: 10, range: 20, spread: 0.1, count: 1 };
+        return { damage: 10, range: 20, spread: 0.1, count: 1, recoil: 0.2 };
     }
   }
 
@@ -59,7 +116,7 @@ export class ShootingSystem {
       if (!g.inventory.equipped) {
         g.ui.toast('Equipe uma arma primeiro!', 'info');
       } else if (!g.inventory.has('municao')) {
-        g.ui.toast('SEM MUNIÇÃO! Encontre caixas de munição.', 'danger', 3500);
+        g.ui.toast('SEM MUNICAO! Encontre caixas de municao.', 'danger', 3500);
         g.audio.engineDeny();
       }
       return false;
@@ -71,28 +128,35 @@ export class ShootingSystem {
     
     this.lastShotTime = now;
     
-    /* consome 1 munição por tiro (escopeta usa 1 por disparo, não por pellet) */
+    /* consome 1 municao por tiro (escopeta usa 1 por disparo, nao por pellet) */
     g.inventory.counts.municao--;
     g.inventory._emit('municao');
 
     /* efeito sonoro */
     this._playShootSound(weaponId);
 
-    /* recuo da câmera */
-    g.cameraRig.addShake(weaponId === 'escopeta' ? 0.6 : weaponId === 'rifle' ? 0.35 : 0.2);
+    /* recuo da arma (animacao) */
+    this.weaponRecoil = stats.recoil;
+    this.recoilRecovery = stats.recoil * 3.5; /* recuperacao por segundo */
+
+    /* recuo da camera */
+    g.cameraRig.addShake(stats.recoil * 2.5);
 
     /* flash do tiro */
     this._muzzleFlash();
 
-    /* raycast para cada pellet */
+    /* ejeção de cartucho */
+    this._ejectShell();
+
+    /* raycast para cada pellet usando o angulo da mira */
     for (let i = 0; i < stats.count; i++) {
       this._fireRay(stats, i);
     }
 
-    /* partículas na direção do tiro */
+    /* particulas na direcao do tiro */
     const player = g.player;
-    const dirX = Math.sin(player.heading);
-    const dirZ = -Math.cos(player.heading);
+    const dirX = Math.sin(this.aimAngle);
+    const dirZ = -Math.cos(this.aimAngle);
     g.particles.burst(
       player.x + dirX * 0.8,
       1.1,
@@ -125,10 +189,10 @@ export class ShootingSystem {
   _muzzleFlash() {
     const g = this.game;
     const player = g.player;
-    const dirX = Math.sin(player.heading);
-    const dirZ = -Math.cos(player.heading);
+    const dirX = Math.sin(this.aimAngle);
+    const dirZ = -Math.cos(this.aimAngle);
     
-    /* flash instantâneo */
+    /* flash instantaneo */
     g.particles.spawn(
       player.x + dirX * 0.9,
       1.2,
@@ -146,12 +210,38 @@ export class ShootingSystem {
     );
   }
 
+  _ejectShell() {
+    const g = this.game;
+    const player = g.player;
+    
+    /* ejecta cartucho para direita do jogador */
+    const rightX = Math.cos(player.heading);
+    const rightZ = Math.sin(player.heading);
+    
+    g.particles.spawn(
+      player.x + rightX * 0.4,
+      0.9,
+      player.z + rightZ * 0.4,
+      {
+        color: 0xd4af37,
+        size: 0.08,
+        vx: rightX * 1.5 + (Math.random() - 0.5) * 0.5,
+        vy: 1.2 + Math.random() * 0.8,
+        vz: rightZ * 1.5 + (Math.random() - 0.5) * 0.5,
+        life: 0.6,
+        opacity: 0.9,
+        gravity: 2.5,
+        shell: true,
+      }
+    );
+  }
+
   _fireRay(stats, pelletIndex = 0) {
     const g = this.game;
     const player = g.player;
     
-    /* direção base + spread */
-    const baseAngle = player.heading;
+    /* direcao base + spread usando o angulo da mira */
+    const baseAngle = this.aimAngle;
     const spreadAngle = (Math.random() - 0.5) * stats.spread;
     const angle = baseAngle + spreadAngle;
     
@@ -168,12 +258,12 @@ export class ShootingSystem {
       x += dirX * stepSize;
       z += dirZ * stepSize;
       
-      /* verifica colisão com entidades */
+      /* verifica colisao com entidades */
       if (x < 1.5 || z < 1.5 || x > g.world.size - 1.5 || z > g.world.size - 1.5) {
         break;
       }
       
-      /* verifica prédios */
+      /* verifica predios */
       const building = g.world.getBuildingAt(x, z);
       if (building) {
         this._hitBuilding(building, x, z, stats.damage);
@@ -181,7 +271,7 @@ export class ShootingSystem {
         break;
       }
       
-      /* verifica props destrutíveis */
+      /* verifica props destrutiveis */
       const prop = g.world.getPropAt(x, z);
       if (prop && prop.destructible) {
         this._hitProp(prop, x, z, stats.damage);
@@ -190,7 +280,7 @@ export class ShootingSystem {
       }
     }
     
-    /* trilha do projétil (apenas para rifle) */
+    /* trilha do projetil (apenas para rifle) */
     if (stats.range > 30 && pelletIndex === 0) {
       this._bulletTrail(player.x, player.z, x, z);
     }
@@ -199,14 +289,14 @@ export class ShootingSystem {
   _hitBuilding(building, x, z, damage) {
     const g = this.game;
     
-    /* partículas de impacto */
+    /* particulas de impacto */
     g.particles.burst(x, 0.8, z, 0x888888, 5);
     
     /* som de impacto */
     g.audio._noise(0.08, 0.12, 800, 'highpass');
     g.audio._tone('square', 200, 0.04, 0.08, 150);
     
-    /* marca de bala temporária */
+    /* marca de bala temporaria */
     g.particles.spawn(x, 0.9, z, {
       color: 0x333333,
       size: 0.15,
@@ -221,18 +311,18 @@ export class ShootingSystem {
     
     prop.hp = (prop.hp || 100) - damage;
     
-    /* partículas */
+    /* particulas */
     g.particles.burst(x, 0.6, z, 0x8b7355, 8);
     
     /* som */
     g.audio._noise(0.1, 0.15, 600, 'bandpass');
     
     if (prop.hp <= 0) {
-      /* prop destruído */
+      /* prop destruido */
       g.world.removePropById(prop.id);
       g.audio.crash();
       g.particles.burst(x, 0.4, z, 0x6d5a4b, 12);
-      g.ui.toast('Objeto destruído!', 'loot');
+      g.ui.toast('Objeto destruido!', 'loot');
     }
   }
 
@@ -254,5 +344,12 @@ export class ShootingSystem {
   update(dt) {
     /* recarrega capacidade de tiro */
     this.canShoot = true;
+    /* atualiza mira */
+    this.updateAim(dt);
+  }
+  
+  setMousePosition(x, y) {
+    this.mouseX = x;
+    this.mouseY = y;
   }
 }

@@ -300,7 +300,12 @@ export class Game {
           }
         }
 
-        /* tiro com clique esquerdo ou F */
+        /* atualiza mira do sistema de tiro com posicao do mouse */
+        if (!driving) {
+          this.shootingSystem.setMousePosition(inp.mouseX, inp.mouseY);
+        }
+
+        // tiro com clique esquerdo ou F
         if (!driving && (inp.wasPressed('Mouse0') || inp.wasPressed('KeyF'))) {
           this.shootingSystem.fire();
         }
