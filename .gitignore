@@ -1,1 +1,11 @@
-Nothing needs to be added to .gitignore since only source code files (.js, .css) were modified, added, or deleted in this commit. These are legitimate project files that should be tracked by git.
+```
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# Vite cache
+.node_modules/.vite/
+```

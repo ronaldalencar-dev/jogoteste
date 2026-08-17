@@ -126,18 +126,47 @@ export class Player extends Entity {
     rMag.position.set(0, -0.14, 0.02);
     rifle.add(rBarrel, rBody, rMag);
 
-    for (const [id, wpn] of Object.entries({ pistola: pistol, escopeta: shotgun, rifle })) {
+    /* lanterna */
+    const lantern = new THREE.Group();
+    const lanternBody = new THREE.Mesh(geoBox(0.12, 0.12, 0.28), gunDark);
+    lanternBody.position.set(0, 0, 0.08);
+    const lanternGlass = new THREE.Mesh(geoBox(0.1, 0.1, 0.06), new THREE.MeshLambertMaterial({ color: 0xd8d8c0 }));
+    lanternGlass.position.set(0, 0, 0.22);
+    lantern.add(lanternBody, lanternGlass);
+    /* luz da lanterna */
+    this.lanternLight = new THREE.SpotLight(0xffddaa, 0, 18, Math.PI / 4, 0.5, 1);
+    this.lanternLight.position.set(0, 0, 0);
+    this.lanternLight.target.position.set(0, 0, 1);
+    lantern.add(this.lanternLight);
+    lantern.add(this.lanternLight.target);
+
+    for (const [id, wpn] of Object.entries({ pistola: pistol, escopeta: shotgun, rifle, lanterna: lantern })) {
       wpn.visible = false;
       wpn.position.set(0, -0.18, 0.1);
       this.armR.add(wpn);
       this.weapons[id] = wpn;
     }
     this.equipped = null;
+    this.lanternOn = false;
   }
 
   setWeapon(id) {
     for (const [wid, wpn] of Object.entries(this.weapons)) wpn.visible = wid === id;
     this.equipped = id || null;
+    /* lanterna ligada só quando equipada */
+    if (id === 'lanterna' && this.lanternOn) {
+      this.lanternLight.intensity = 1.2;
+    } else {
+      this.lanternLight.intensity = 0;
+    }
+  }
+
+  toggleLantern() {
+    this.lanternOn = !this.lanternOn;
+    if (this.equipped === 'lanterna') {
+      this.lanternLight.intensity = this.lanternOn ? 1.2 : 0;
+    }
+    return this.lanternOn;
   }
 
   setMove(vx, vz, moving) {
